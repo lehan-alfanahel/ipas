@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Teka Teki Silang Kelas 5</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#1E3A8A', // Blue 900
+                        secondary: '#F97316', // Orange 500
+                        primaryDark: '#172554',
+                        secondaryDark: '#EA580C',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            background-color: #F3F4F6;
+            touch-action: manipulation; /* Prevent double tap zoom */
+        }
+
+        /* Screen Transitions */
+        .screen {
+            display: none;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+        .screen.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        /* TTS Grid Styles */
+        .tts-container {
+            overflow: auto;
+            max-width: 100%;
+            padding: 110px 40px 60px 40px; /* Menambah padding atas agar kotak TTS tidak terlalu dekat dengan card pertanyaan */
+            /* Hide scrollbar for cleaner look */
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .tts-grid {
+            display: grid;
+            width: max-content; /* Ensure grid doesn't squash */
+            margin: 0 auto; /* Diubah agar posisi rapat ke atas (di bawah pertanyaan) tidak rata tengah layar */
+            padding: 4px;
+        }
+
+        .tts-cell {
+            width: 26px; /* Mengecilkan ukuran kotak untuk mobile */
+            height: 26px;
+            background-color: transparent;
+            position: relative;
+            user-select: none;
+        }
+
+        @media (min-width: 768px) {
+            .tts-cell {
+                width: 34px; /* Mengecilkan ukuran kotak untuk tablet/desktop */
+                height: 34px;
+            }
+        }
+
+        .tts-cell.active-bg {
+            background-color: white;
+            border: 1px solid #374151; /* Menambahkan garis tepi/border yang tegas */
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .tts-cell.active-bg:hover {
+            background-color: #FEF08A; /* Light yellow hover */
+        }
+
+        .tts-cell.highlight-word {
+            background-color: #DBEAFE; /* Light blue for active word */
+        }
+
+        .tts-cell.highlight-cell {
+            background-color: #FDE047; /* Yellow for active cell */
+        }
+
+        .tts-cell.correct {
+            background-color: #bbf7d0 !important; /* Light green */
+            color: #166534;
+            font-weight: bold;
+        }
+
+        .tts-cell.incorrect {
+            background-color: #fecaca !important; /* Light red */
+            color: #991b1b;
+        }
+
+        .cell-number {
+            position: absolute;
+            top: 1px;
+            left: 2px;
+            font-size: 7px; /* Menyesuaikan ukuran angka dengan kotak baru */
+            font-weight: 600;
+            color: #4B5563;
+            line-height: 1;
+        }
+
+        @media (min-width: 768px) {
+            .cell-number {
+                font-size: 9px;
+            }
+        }
+
+        .cell-input {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px; /* Menyesuaikan ukuran huruf inputan */
+            font-weight: 800;
+            text-transform: uppercase;
+            color: #1F2937;
+        }
+
+        @media (min-width: 768px) {
+            .cell-input {
+                font-size: 16px;
+            }
+        }
+
+        /* Hidden input for mobile keyboard triggering */
+        #hidden-input {
+            position: absolute;
+            opacity: 0;
+            top: -1000px;
+            left: -1000px;
+        }
+
+        /* Animations */
+        @keyframes bounceIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            60% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-bounce-in {
+            animation: bounceIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 h-screen w-screen overflow-hidden text-gray-800">
+
+    <!-- Screen 1: Cover -->
+    <div id="screen-cover" class="screen active flex-col items-center justify-center h-screen w-screen bg-gradient-to-br from-primary to-primaryDark text-white p-6 relative">
+        <div class="absolute inset-0 opacity-10" style="background-image: url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');"></div>
+        
+        <div class="text-center z-10 animate-bounce-in w-full max-w-2xl flex flex-col items-center justify-center">
+            <!-- Menampilkan foto guru/logo menggunakan nama file lehan.jpg -->
+            <div class="flex justify-center mb-5">
+                <img src="./lehan.jpg" onerror="this.onerror=null; this.src='https://placehold.co/160x160/1E3A8A/ffffff?text=FOTO+GURU';" alt="Logo Guru" class="w-24 h-24 md:w-32 md:h-32 object-cover rounded-full border-4 border-white/30 shadow-lg">
+            </div>
+            
+            <!-- Ukuran teks TEKA TEKI SILANG -->
+            <h1 class="text-3xl md:text-5xl font-black mb-2 leading-tight drop-shadow-lg">
+                TEKA TEKI SILANG
+            </h1>
+            <h2 class="text-2xl md:text-4xl font-bold mb-2 text-secondary drop-shadow-md">
+                KELAS 5
+            </h2>
+            <h3 class="text-xl md:text-2xl font-semibold mb-5 opacity-90">
+                SD NEGERI 2 SENDANG AYU
+            </h3>
+            
+            <!-- Teks pertemuan -->
+            <div class="text-base md:text-xl font-medium mb-8 text-blue-100 drop-shadow-md bg-white/10 py-2.5 px-6 rounded-full inline-block border border-white/20">
+                Pertemuan 2 : Cahaya dan Sifatnya
+            </div>
+            
+            <div>
+                <button onclick="showScreen('screen-form')" class="bg-secondary hover:bg-secondaryDark text-white font-bold py-3.5 px-10 rounded-full text-lg shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1">
+                    MULAI BERMAIN <i class="fa-solid fa-arrow-right ml-2"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Screen 2: Identitas -->
+    <div id="screen-form" class="screen flex-col items-center justify-center h-full w-full bg-gray-50 p-6">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md animate-bounce-in border-t-8 border-primary">
+            <h2 class="text-2xl font-bold text-center mb-6 text-primary">Isi Data Diri Dulu Yuk!</h2>
+            
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="studentName">
+                    Nama Lengkap
+                </label>
+                <input class="shadow-sm appearance-none border border-gray-300 rounded-xl w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" id="studentName" type="text" placeholder="Masukkan namamu...">
+            </div>
+            
+            <div class="mb-8">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="studentClass">
+                    Kelas
+                </label>
+                <input class="shadow-sm appearance-none border border-gray-300 rounded-xl w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" id="studentClass" type="text" value="5" readonly>
+            </div>
+            
+            <button onclick="startGame()" class="w-full bg-primary hover:bg-primaryDark text-white font-bold py-3 px-4 rounded-xl shadow-md hover:shadow-lg transition-all">
+                LANJUT KE PERMAINAN <i class="fa-solid fa-play ml-2"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Screen 3: Game Area -->
+    <div id="screen-game" class="screen flex-col h-full w-full bg-gray-100 relative">
+        
+        <!-- Header Fixed -->
+        <header class="bg-primary text-white p-3 md:p-4 shadow-md flex justify-between items-center z-20 shrink-0">
+            <div class="flex items-center">
+                <div class="bg-white/20 p-2 rounded-lg mr-3 hidden md:block">
+                    <i class="fa-solid fa-puzzle-piece text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-sm md:text-lg leading-tight">TTS KELAS 5</h1>
+                    <p class="text-xs text-blue-200" id="header-player-name">Pemain: -</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <div class="text-xs md:text-sm font-semibold text-blue-100 flex items-center mr-2">
+                    <i class="fa-solid fa-lightbulb text-yellow-400 mr-1.5"></i> Materi: Cahaya
+                </div>
+                <button onclick="toggleFullScreen()" class="bg-white/10 hover:bg-white/20 p-2 rounded-lg transition-colors" title="Full Screen">
+                    <i id="fullscreen-icon" class="fa-solid fa-expand"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <div class="flex-1 flex overflow-hidden relative">
+            
+            <!-- Floating Action Bar & Clue Card -->
+            <div class="absolute top-3 left-3 right-3 z-30 flex items-center justify-between pointer-events-none gap-2">
+                <!-- Tombol Reset di Atas Kiri -->
+                <button onclick="resetGame()" class="pointer-events-auto px-3.5 py-2 bg-white hover:bg-gray-100 text-gray-700 font-semibold rounded-xl text-xs md:text-sm shadow-md border border-gray-200 transition-colors flex items-center shrink-0">
+                    <i class="fa-solid fa-rotate-left mr-1.5"></i> Reset
+                </button>
+
+                <!-- Floating Clue Box di Tengah -->
+                <div id="floating-clue" class="pointer-events-auto bg-white px-4 py-2.5 rounded-xl shadow-lg border-b-4 border-secondary hidden flex-col max-w-xl w-full transition-all duration-300 text-center mx-2">
+                    <span id="floating-clue-dir" class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-0.5">Mendatar</span>
+                    <span id="floating-clue-text" class="text-xs md:text-sm font-bold text-primary">Klik kotak untuk melihat pertanyaan</span>
+                </div>
+
+                <!-- Tombol Cek Jawaban di Atas Kanan -->
+                <button onclick="checkAnswers()" class="pointer-events-auto px-4 py-2 bg-secondary hover:bg-secondaryDark text-white font-bold rounded-xl text-xs md:text-sm shadow-md transition-colors flex items-center shrink-0">
+                    <i class="fa-solid fa-check-circle mr-1.5"></i> Cek Jawaban
+                </button>
+            </div>
+
+            <!-- Grid Container (Full Page) -->
+            <div class="w-full h-full bg-gray-200 flex relative shadow-inner overflow-hidden">
+                <div class="tts-container w-full h-full flex" id="grid-scroll-container">
+                    <div id="tts-grid-element" class="tts-grid">
+                        <!-- Grid cells will be generated here by JS -->
+                    </div>
+                </div>
+                <!-- Hidden input for mobile keyboard -->
+                <input type="text" id="hidden-input" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Modal -->
+    <div id="custom-modal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300 backdrop-blur-sm">
+        <div id="modal-content" class="bg-white rounded-2xl shadow-2xl p-6 m-4 max-w-sm w-full transform scale-95 transition-transform duration-300 text-center">
+            <div id="modal-icon" class="text-6xl mb-4"></div>
+            <h3 id="modal-title" class="text-2xl font-bold mb-2"></h3>
+            <p id="modal-message" class="text-gray-600 mb-6"></p>
+            <button onclick="closeModal()" class="w-full py-3 rounded-xl font-bold text-white transition-colors" id="modal-btn">
+                Tutup
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- Data Configuration ---
+        // Coordinates and data derived to fit the requested connections while preventing overlaps.
+        const ttsData = [
+            // Mendatar (Across) - categorized by display section
+            { id: 1, answer: "CAHAYA", clue: "Bentuk energi yang memungkinkan kita melihat benda di sekitar.", row: 5, col: 11, dir: 'H', type: 'mendatar' },
+            { id: 3, answer: "LAMPU", clue: "Alat penerang yang menggunakan listrik.", row: 17, col: 4, dir: 'H', type: 'mendatar' },
+            { id: 4, answer: "LURUS", clue: "Sifat cahaya yang bergerak tanpa berbelok.", row: 17, col: 11, dir: 'H', type: 'mendatar' },
+            { id: 5, answer: "PEMANTULAN", clue: "Cahaya yang mengenai cermin akan mengalami peristiwa ....", row: 7, col: 5, dir: 'H', type: 'mendatar' },
+            { id: 7, answer: "PEMBIASAN", clue: "Peristiwa pembelokan cahaya saat melewati dua medium yang berbeda disebut ....", row: 8, col: 3, dir: 'H', type: 'mendatar' },
+            { id: 8, answer: "PELANGI", clue: "Warna-warni yang muncul di langit setelah hujan akibat penguraian cahaya.", row: 10, col: 8, dir: 'H', type: 'mendatar' },
+            { id: 9, answer: "PRISMA", clue: "Alat transparan yang dapat menguraikan cahaya putih menjadi berbagai warna.", row: 12, col: 4, dir: 'H', type: 'mendatar' },
+            { id: 10, answer: "BENDA", clue: "Bayangan terbentuk ketika cahaya terhalang oleh suatu ....", row: 15, col: 5, dir: 'H', type: 'mendatar' },
+            { id: 12, answer: "SEMU", clue: "Bayangan yang dihasilkan cermin datar bersifat tegak dan ....", row: 15, col: 13, dir: 'H', type: 'mendatar' }, 
+            { id: 18, answer: "BAUR", clue: "Pantulan cahaya pada permukaan yang tidak rata disebut pemantulan ....", row: 1, col: 11, dir: 'H', type: 'mendatar' },
+            
+            // Menurun (Down)
+            { id: 2, answer: "MATAHARI", clue: "Sumber cahaya alami terbesar di Bumi.", row: 2, col: 12, dir: 'V', type: 'menurun' },
+            { id: 11, answer: "CERMIN", clue: "Alat yang memantulkan cahaya sehingga kita dapat melihat bayangan diri.", row: 4, col: 7, dir: 'V', type: 'menurun' },
+            { id: 13, answer: "DATAR", clue: "Jenis cermin yang menghasilkan bayangan sama besar dengan bendanya.", row: 12, col: 18, dir: 'V', type: 'menurun' },
+            { id: 14, answer: "CEMBUNG", clue: "Jenis cermin yang digunakan pada kaca spion kendaraan.", row: 11, col: 14, dir: 'V', type: 'menurun' },
+            { id: 19, answer: "CEKUNG", clue: "Jenis cermin yang digunakan pada lampu sorot dan senter.", row: 10, col: 17, dir: 'V', type: 'menurun' },
+            { id: 20, answer: "TERATUR", clue: "Pantulan cahaya pada permukaan yang rata dan halus disebut pemantulan ....", row: 10, col: 6, dir: 'V', type: 'menurun' }
+        ];
+
+        // --- State Variables ---
+        let gridMap = {}; // Format: { "row-col": { char: 'A', ids: [1, 2], number: 1, userInput: '' } }
+        let maxRow = 0;
+        let maxCol = 0;
+        let activeCellId = null; // "row-col"
+        let activeDirection = 'H'; // 'H' or 'V'
+        let playerName = "";
+
+        // --- Core Functions ---
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => {
+                if (s.id === screenId) {
+                    s.style.display = 'flex';
+                    // Trigger reflow
+                    void s.offsetWidth;
+                    s.classList.add('active');
+                } else {
+                    s.classList.remove('active');
+                    setTimeout(() => {
+                        if (!s.classList.contains('active')) {
+                            s.style.display = 'none';
+                        }
+                    }, 500); // Menyesuaikan dengan durasi transisi CSS (0.5s)
+                }
+            });
+        }
+
+        function startGame() {
+            const nameInput = document.getElementById('studentName').value.trim();
+            if (nameInput === "") {
+                showFeedback('error', 'Oops!', 'Silakan isi namamu terlebih dahulu ya!');
+                return;
+            }
+            playerName = nameInput;
+            document.getElementById('header-player-name').innerText = `Pemain: ${playerName}`;
+            
+            buildGridData();
+            renderGrid();
+            showScreen('screen-game');
+
+            // Set initial active cell to question number 1 (CAHAYA)
+            const firstWord = ttsData.find(w => w.id === 1);
+            if(firstWord) {
+                setActiveCell(firstWord.row, firstWord.col, firstWord.dir);
+            }
+        }
+
+        function buildGridData() {
+            gridMap = {};
+            maxRow = 0;
+            maxCol = 0;
+
+            ttsData.forEach(wordObj => {
+                const { id, answer, row, col, dir } = wordObj;
+                
+                for (let i = 0; i < answer.length; i++) {
+                    let r = dir === 'H' ? row : row + i;
+                    let c = dir === 'H' ? col + i : col;
+                    
+                    let cellKey = `${r}-${c}`;
+                    
+                    if (r > maxRow) maxRow = r;
+                    if (c > maxCol) maxCol = c;
+
+                    if (!gridMap[cellKey]) {
+                        gridMap[cellKey] = {
+                            char: answer[i],
+                            ids: [id],
+                            number: i === 0 ? id : null, // Only number the start cell
+                            userInput: '',
+                            isStart: i === 0
+                        };
+                    } else {
+                        gridMap[cellKey].ids.push(id);
+                        // If multiple words start here, ensure number is shown (usually the smaller ID)
+                        if (i === 0) {
+                            gridMap[cellKey].number = gridMap[cellKey].number ? Math.min(gridMap[cellKey].number, id) : id;
+                            gridMap[cellKey].isStart = true;
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderGrid() {
+            const gridEl = document.getElementById('tts-grid-element');
+            gridEl.innerHTML = '';
+            
+            // Set CSS Grid dimensions dynamically
+            gridEl.style.gridTemplateColumns = `repeat(${maxCol}, 1fr)`;
+            gridEl.style.gridTemplateRows = `repeat(${maxRow}, 1fr)`;
+
+            for (let r = 1; r <= maxRow; r++) {
+                for (let c = 1; c <= maxCol; c++) {
+                    const cellKey = `${r}-${c}`;
+                    const cellData = gridMap[cellKey];
+                    
+                    const cellEl = document.createElement('div');
+                    cellEl.id = `cell-${cellKey}`;
+                    cellEl.className = 'tts-cell';
+                    
+                    if (cellData) {
+                        cellEl.classList.add('active-bg');
+                        cellEl.onclick = () => handleCellClick(r, c);
+                        
+                        if (cellData.number) {
+                            const numEl = document.createElement('span');
+                            numEl.className = 'cell-number';
+                            numEl.innerText = cellData.number;
+                            cellEl.appendChild(numEl);
+                        }
+
+                        const inputEl = document.createElement('div');
+                        inputEl.className = 'cell-input';
+                        inputEl.id = `input-${cellKey}`;
+                        inputEl.innerText = cellData.userInput;
+                        cellEl.appendChild(inputEl);
+                    }
+                    
+                    gridEl.appendChild(cellEl);
+                }
+            }
+        }
+
+        function updateFloatingClue(activeWord) {
+            const clueBox = document.getElementById('floating-clue');
+            const dirEl = document.getElementById('floating-clue-dir');
+            const textEl = document.getElementById('floating-clue-text');
+
+            if (activeWord) {
+                clueBox.classList.remove('hidden');
+                clueBox.classList.add('flex');
+                
+                const icon = activeWord.dir === 'H' ? 'fa-arrow-right' : 'fa-arrow-down';
+                dirEl.innerHTML = `<i class="fa-solid ${icon} text-secondary mr-1"></i> ${activeWord.id}. ${activeWord.type.toUpperCase()}`;
+                textEl.innerText = activeWord.clue;
+            }
+        }
+
+        function handleCellClick(r, c) {
+            const cellKey = `${r}-${c}`;
+            const cellData = gridMap[cellKey];
+            if (!cellData) return;
+
+            // Determine direction based on available words at this cell
+            let newDir = activeDirection;
+            
+            // Find which words belong to this cell
+            const wordsHere = ttsData.filter(w => cellData.ids.includes(w.id));
+            
+            if (wordsHere.length === 1) {
+                newDir = wordsHere[0].dir;
+            } else if (wordsHere.length > 1) {
+                // If clicking the same cell, toggle direction
+                if (activeCellId === cellKey) {
+                    newDir = activeDirection === 'H' ? 'V' : 'H';
+                    // Ensure the toggled direction actually exists for this cell
+                    const hasToggledDir = wordsHere.some(w => w.dir === newDir);
+                    if (!hasToggledDir) newDir = activeDirection; // Revert if invalid
+                } else {
+                    // Smart default: prioritize direction that hasn't been completed, or just stick to current
+                    const hasHorizontal = wordsHere.some(w => w.dir === 'H');
+                    if(hasHorizontal && activeDirection === 'H') newDir = 'H';
+                    else if(!hasHorizontal) newDir = 'V';
+                }
+            }
+
+            setActiveCell(r, c, newDir);
+            
+            // Focus hidden input for mobile keyboard
+            const hiddenInput = document.getElementById('hidden-input');
+            hiddenInput.value = '';
+            hiddenInput.focus();
+        }
+
+        function setActiveCell(r, c, dir) {
+            // Clear previous highlights
+            document.querySelectorAll('.tts-cell').forEach(el => {
+                el.classList.remove('highlight-word', 'highlight-cell');
+            });
+
+            activeCellId = `${r}-${c}`;
+            activeDirection = dir;
+
+            // Highlight new cell
+            const currentCellEl = document.getElementById(`cell-${activeCellId}`);
+            if(currentCellEl) currentCellEl.classList.add('highlight-cell');
+
+            // Find active word ID to highlight path and clue
+            const cellData = gridMap[activeCellId];
+            if (!cellData) return;
+
+            const activeWord = ttsData.find(w => cellData.ids.includes(w.id) && w.dir === dir);
+            
+            // Tampilkan pertanyaan di kotak melayang
+            updateFloatingClue(activeWord);
+
+            if (activeWord) {
+                // Highlight Word Path
+                for (let i = 0; i < activeWord.answer.length; i++) {
+                    let wr = activeWord.dir === 'H' ? activeWord.row : activeWord.row + i;
+                    let wc = activeWord.dir === 'H' ? activeWord.col + i : activeWord.col;
+                    let wKey = `${wr}-${wc}`;
+                    if (wKey !== activeCellId) {
+                        const pathEl = document.getElementById(`cell-${wKey}`);
+                        if(pathEl) pathEl.classList.add('highlight-word');
+                    }
+                }
+            }
+        }
+
+        // Handle physical keyboard
+        document.addEventListener('keydown', function(e) {
+            if (document.getElementById('screen-game').classList.contains('active') && activeCellId) {
+                // Mencegah scroll saat menekan tombol arah
+                if(["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].indexOf(e.code) > -1) {
+                    e.preventDefault();
+                }
+
+                if (e.key.match(/^[a-zA-Z]$/) && e.key.length === 1) {
+                    // Mencegah trigger event default agar tidak menginput dua kali (bentrok dengan hidden-input)
+                    e.preventDefault();
+                    processInput(e.key.toUpperCase());
+                } else if (e.key === 'Backspace' || e.key === 'Delete') {
+                    e.preventDefault();
+                    processBackspace();
+                } else if (e.key.startsWith('Arrow')) {
+                    handleArrowNavigation(e.key);
+                }
+            }
+        });
+
+        // Handle mobile virtual keyboard via hidden input
+        document.getElementById('hidden-input').addEventListener('input', function(e) {
+            const val = this.value;
+            // Ambil karakter terakhir jika terjadi input beruntun
+            const char = val.slice(-1);
+            
+            if (char && char.match(/^[a-zA-Z]$/)) {
+                processInput(char.toUpperCase());
+            } else if (val === '') {
+                // Tangani hapus jika backspace terdeteksi via input reset (di hp tertentu)
+                processBackspace();
+            }
+            this.value = ''; // Segera kosongkan input bayangan
+        });
+
+        function processInput(char) {
+            if (!activeCellId || !gridMap[activeCellId]) return;
+
+            // Update data model
+            gridMap[activeCellId].userInput = char;
+            
+            // Update UI
+            const inputEl = document.getElementById(`input-${activeCellId}`);
+            if (inputEl) inputEl.innerText = char;
+            
+            // Remove correctness classes if changing answer
+            const cellEl = document.getElementById(`cell-${activeCellId}`);
+            if(cellEl) cellEl.classList.remove('correct', 'incorrect');
+
+            moveToNextCell();
+        }
+
+        function processBackspace() {
+            if (!activeCellId || !gridMap[activeCellId]) return;
+            
+            // If current cell has text, clear it
+            if (gridMap[activeCellId].userInput !== '') {
+                gridMap[activeCellId].userInput = '';
+                const inputEl = document.getElementById(`input-${activeCellId}`);
+                if (inputEl) inputEl.innerText = '';
+                
+                const cellEl = document.getElementById(`cell-${activeCellId}`);
+                if(cellEl) cellEl.classList.remove('correct', 'incorrect');
+            } else {
+                // If empty, move back and clear
+                moveToPrevCell();
+                if(activeCellId && gridMap[activeCellId]) {
+                    gridMap[activeCellId].userInput = '';
+                    const prevInputEl = document.getElementById(`input-${activeCellId}`);
+                    if (prevInputEl) prevInputEl.innerText = '';
+                    const prevCellEl = document.getElementById(`cell-${activeCellId}`);
+                    if(prevCellEl) prevCellEl.classList.remove('correct', 'incorrect');
+                }
+            }
+        }
+
+        function moveToNextCell() {
+            let [r, c] = activeCellId.split('-').map(Number);
+            
+            if (activeDirection === 'H') c++;
+            else r++;
+
+            const nextKey = `${r}-${c}`;
+            
+            // Only move if the next cell is part of the SAME active word
+            const currentCellData = gridMap[activeCellId];
+            const nextCellData = gridMap[nextKey];
+            
+            if (nextCellData) {
+                // Find active word
+                const activeWord = ttsData.find(w => currentCellData.ids.includes(w.id) && w.dir === activeDirection);
+                if (activeWord && nextCellData.ids.includes(activeWord.id)) {
+                    setActiveCell(r, c, activeDirection);
+                }
+            }
+        }
+
+        function moveToPrevCell() {
+            let [r, c] = activeCellId.split('-').map(Number);
+            
+            if (activeDirection === 'H') c--;
+            else r--;
+
+            const prevKey = `${r}-${c}`;
+            const currentCellData = gridMap[activeCellId];
+            const prevCellData = gridMap[prevKey];
+
+            if (prevCellData) {
+                const activeWord = ttsData.find(w => currentCellData.ids.includes(w.id) && w.dir === activeDirection);
+                if (activeWord && prevCellData.ids.includes(activeWord.id)) {
+                    setActiveCell(r, c, activeDirection);
+                }
+            }
+        }
+
+        function handleArrowNavigation(key) {
+            let [r, c] = activeCellId.split('-').map(Number);
+            let newR = r, newC = c;
+
+            if (key === 'ArrowRight') newC++;
+            else if (key === 'ArrowLeft') newC--;
+            else if (key === 'ArrowDown') newR++;
+            else if (key === 'ArrowUp') newR--;
+
+            const targetKey = `${newR}-${newC}`;
+            if (gridMap[targetKey]) {
+                // Infer new direction based on movement if possible, or keep current
+                let newDir = activeDirection;
+                if (key === 'ArrowRight' || key === 'ArrowLeft') newDir = 'H';
+                if (key === 'ArrowDown' || key === 'ArrowUp') newDir = 'V';
+                
+                // Only change if the target cell supports that direction
+                const targetData = gridMap[targetKey];
+                const supportsDir = ttsData.some(w => targetData.ids.includes(w.id) && w.dir === newDir);
+                
+                setActiveCell(newR, newC, supportsDir ? newDir : activeDirection);
+            }
+        }
+
+        function checkAnswers() {
+            let isComplete = true;
+            let isAllCorrect = true;
+            let filledCount = 0;
+            let totalCells = Object.keys(gridMap).length;
+
+            for (const key in gridMap) {
+                const cell = gridMap[key];
+                const el = document.getElementById(`cell-${key}`);
+                
+                if (cell.userInput === '') {
+                    isComplete = false;
+                    isAllCorrect = false;
+                } else {
+                    filledCount++;
+                    if (cell.userInput === cell.char) {
+                        el.classList.add('correct');
+                        el.classList.remove('incorrect');
+                    } else {
+                        el.classList.add('incorrect');
+                        el.classList.remove('correct');
+                        isAllCorrect = false;
+                    }
+                }
+            }
+
+            if (filledCount === 0) {
+                 showFeedback('warning', 'Belum Diisi', 'Ayo isi TTS-nya dulu sebelum mengecek jawaban.');
+                 return;
+            }
+
+            if (isAllCorrect && isComplete) {
+                // Random positive feedback
+                const feedbacks = ["Wow kamu hebat sekali!", "Keren... kamu Pintar Sekali!", "Luar Biasa, Jawabanmu Sempurna!"];
+                const randomMsg = feedbacks[Math.floor(Math.random() * feedbacks.length)];
+                showFeedback('success', 'Selamat!', randomMsg);
+            } else {
+                showFeedback('error', 'Semangat!', 'Masih ada yang salah nih. Coba lagi yuk!');
+            }
+        }
+
+        function resetGame() {
+            for (const key in gridMap) {
+                gridMap[key].userInput = '';
+                const inputEl = document.getElementById(`input-${key}`);
+                if (inputEl) inputEl.innerText = '';
+                const cellEl = document.getElementById(`cell-${key}`);
+                if (cellEl) cellEl.classList.remove('correct', 'incorrect');
+            }
+            if(ttsData[0]) setActiveCell(ttsData[0].row, ttsData[0].col, ttsData[0].dir);
+        }
+
+        function showFeedback(type, title, message) {
+            const modal = document.getElementById('custom-modal');
+            const modalContent = document.getElementById('modal-content');
+            const iconEl = document.getElementById('modal-icon');
+            const titleEl = document.getElementById('modal-title');
+            const msgEl = document.getElementById('modal-message');
+            const btnEl = document.getElementById('modal-btn');
+
+            titleEl.innerText = title;
+            msgEl.innerText = message;
+
+            if (type === 'success') {
+                iconEl.innerHTML = '<i class="fa-solid fa-star text-yellow-400 drop-shadow-md"></i>';
+                titleEl.className = "text-2xl font-bold mb-2 text-green-600";
+                btnEl.className = "w-full py-3 rounded-xl font-bold text-white transition-colors bg-green-500 hover:bg-green-600 shadow-lg";
+                startConfetti();
+            } else if (type === 'error') {
+                iconEl.innerHTML = '<i class="fa-solid fa-face-smile-beam text-orange-500"></i>';
+                titleEl.className = "text-2xl font-bold mb-2 text-orange-600";
+                btnEl.className = "w-full py-3 rounded-xl font-bold text-white transition-colors bg-orange-500 hover:bg-orange-600 shadow-md";
+            } else {
+                iconEl.innerHTML = '<i class="fa-solid fa-circle-info text-blue-500"></i>';
+                titleEl.className = "text-2xl font-bold mb-2 text-blue-600";
+                btnEl.className = "w-full py-3 rounded-xl font-bold text-white transition-colors bg-blue-500 hover:bg-blue-600 shadow-md";
+            }
+
+            modal.classList.remove('hidden');
+            // Trigger reflow
+            void modal.offsetWidth;
+            modal.classList.remove('opacity-0');
+            modalContent.classList.remove('scale-95');
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('custom-modal');
+            const modalContent = document.getElementById('modal-content');
+            
+            modal.classList.add('opacity-0');
+            modalContent.classList.add('scale-95');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                stopConfetti();
+            }, 300);
+        }
+
+        function toggleFullScreen() {
+            const elem = document.documentElement;
+            const icon = document.getElementById('fullscreen-icon');
+            
+            if (!document.fullscreenElement && !document.mozFullScreenElement &&
+                !document.webkitFullscreenElement && !document.msFullscreenElement) {
+                // Masuk Full Screen
+                if (elem.requestFullscreen) {
+                    elem.requestFullscreen();
+                } else if (elem.msRequestFullscreen) {
+                    elem.msRequestFullscreen();
+                } else if (elem.mozRequestFullScreen) {
+                    elem.mozRequestFullScreen();
+                } else if (elem.webkitRequestFullscreen) {
+                    elem.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+                }
+                
+                // Ubah Icon jadi Compress
+                if (icon) {
+                    icon.classList.remove('fa-expand');
+                    icon.classList.add('fa-compress');
+                }
+            } else {
+                // Keluar Full Screen
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                }
+                
+                // Ubah Icon jadi Expand
+                if (icon) {
+                    icon.classList.remove('fa-compress');
+                    icon.classList.add('fa-expand');
+                }
+            }
+        }
+
+        let confettiInterval;
+        function startConfetti() {
+            const colors = ['#F97316', '#3B82F6', '#FDE047', '#10B981'];
+            const container = document.getElementById('screen-game');
+            
+            confettiInterval = setInterval(() => {
+                const confetti = document.createElement('div');
+                confetti.style.position = 'absolute';
+                confetti.style.width = '10px';
+                confetti.style.height = '10px';
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.top = '-10px';
+                confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+                confetti.style.opacity = Math.random();
+                confetti.style.pointerEvents = 'none';
+                confetti.style.zIndex = '40';
+                
+                container.appendChild(confetti);
+                
+                const animation = confetti.animate([
+                    { transform: `translate3d(0,0,0) rotate(0deg)`, opacity: 1 },
+                    { transform: `translate3d(${Math.random()*100 - 50}px, 100vh, 0) rotate(${Math.random()*360}deg)`, opacity: 0 }
+                ], {
+                    duration: Math.random() * 2000 + 1000,
+                    easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+                });
+                
+                animation.onfinish = () => confetti.remove();
+            }, 50);
+        }
+
+        function stopConfetti() {
+            clearInterval(confettiInterval);
+        }
+
+    </script>
+</body>
+</html>
